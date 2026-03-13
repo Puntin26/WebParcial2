@@ -1,0 +1,29 @@
+services:
+  app:
+    build: .
+    container_name: eventos-app
+    restart: unless-stopped
+    expose:
+      - "7000"
+
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: eventos-nginx
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/certs:/etc/letsencrypt
+      - ./nginx/www:/var/www/certbot
+
+  certbot:
+    image: certbot/certbot
+    container_name: eventos-certbot
+    volumes:
+      - ./nginx/certs:/etc/letsencrypt
+      - ./nginx/www:/var/www/certbot
+    entrypoint: /bin/sh -c
+    command: "trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done"
